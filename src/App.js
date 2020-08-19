@@ -1,21 +1,30 @@
-import React, {  useRef, useEffect, useCallback, createContext, useContext, useReducer } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createSet, createAdd, createRemove, createToggle } from './actions'
 import './App.css';
 
-const TodoListContext = createContext();
+function bindActionCreators(actionCreators, dispatch) {
+  const ret = {}
+  for (let key in actionCreators) {
+    ret[key] = function(...args) {
+      const actionCreator = actionCreators[key]
+      const action = actionCreator(...args)
+      dispatch(action)
+    }
+  }
+  return ret
+}
+
 // 操作组件
 function Control(props) {
+  const { addTodo } = props
   const inputRef = useRef()
-  let { dispatch } = useContext(TodoListContext);
   const onSubmit = () => {
     const newText = inputRef.current.value.trim();
-    dispatch({
-      type: "add",
-      payload: {
-        id: Date.now(),
-        text: newText,
-        complete: false,
-      },
-    });
+    addTodo(({
+      id: Date.now(),
+      text: newText,
+      complete: false
+    }));
     inputRef.current.value = "";
   }
   return (
@@ -34,7 +43,7 @@ function Control(props) {
 
 // 列表组件
 function Todos(props) {
-  let { todos } = useContext(TodoListContext);
+  const { todos, toggleTodo, removeTodo } = props
   return (
     <ul>
       {todos.map((todo) => {
@@ -42,6 +51,8 @@ function Todos(props) {
           <TodoItem
             key={todo.id}
             todo={todo}
+            toggleTodo={toggleTodo}
+            removeTodo={removeTodo}
           />
         );
       })}
@@ -49,37 +60,16 @@ function Todos(props) {
   );
 }
 
-function reducer(state, action) {
-  switch (action.type) {
-    case "set":
-      return action.payload;
-    case "add":
-      return [...state, action.payload];
-    case "remove":
-       return state.filter((todo) => {
-        return todo.id !== action.payload;
-      })
-    case "toggle":
-      return state.map((todo) => {
-        return todo.id === action.payload
-          ? { ...todo, complete: !todo.complete }
-          : todo;
-      });
-    default: 
-      return state
-  }
-}
-
 function TodoItem(props) {
-  let { dispatch } = useContext(TodoListContext);
   const {
     todo: { id, text, complete },
+    removeTodo, toggleTodo
   } = props;
   const onChange = () => {
-    dispatch({ type: "toggle", payload: id });
+    toggleTodo(id)
   }
   const onRemove = () => {
-    dispatch({ type: "remove", payload: id });
+    removeTodo(id)
   }
   return (
     <li className="todo-item">
@@ -91,15 +81,12 @@ function TodoItem(props) {
 }
 
 function TodoList() {
-  const initialState = useCallback(() => {
-    const _todos = localStorage.getItem("_$-todos_");
-    return _todos ? JSON.parse(_todos) : [];
-  }, []);
-  const [todos, dispatch] = useReducer(reducer, initialState());
-  // const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState([]);
+
   // const addTodo = useCallback((todo) => {
   //   setTodos(todos => [...todos, todo])
   // }, [])
+
   // const removeTodo = useCallback((id) => {
   //   setTodos((todos) =>
   //     todos.filter((todo) => {
@@ -110,27 +97,69 @@ function TodoList() {
   // const toggleTodo = useCallback((id) => {
   //   setTodos((todos) =>
   //     todos.map((todo) => {
-  //       return todo.id === id ? {...todo, complete: !todo.complete} : todo
+  //       return todo.id === id ? { ...todo, complete: !todo.complete } : todo
   //     })
   //   );
   // }, [])
+
+  const dispatch = useCallback((action) => {
+    const { type, payload } = action
+    switch (type) {
+      case 'set':
+        setTodos(payload)
+        break
+      case 'add':
+        setTodos(todos => [...todos, payload])
+        break
+      case 'remove':
+        setTodos((todos) =>
+          todos.filter((todo) => {
+            return todo.id !== payload
+          })
+        );
+        break
+      case 'toggle':
+        setTodos((todos) =>
+          todos.map((todo) => {
+            return todo.id === payload ? { ...todo, complete: !todo.complete } : todo
+          })
+        )
+        break
+      default:
+    }
+  }, [])
+
   // 项目启动一次
-  // useEffect(() => {
-  //   if (localStorage.getItem("_$-todos_")) {
-  //     const todos = JSON.parse(localStorage.getItem("_$-todos_"));
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (localStorage.getItem("_$-todos_")) {
+      const todos = JSON.parse(localStorage.getItem("_$-todos_"));
+      // setTodos(todos);
+      // dispatch({type: 'set', payload: todos})
+      dispatch(createSet(todos))
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     localStorage.setItem("_$-todos_", JSON.stringify(todos));
   }, [todos]);
 
+
   return (
     <div className="todo-list">
-      <TodoListContext.Provider value={{ todos, dispatch }}>
-        <Control />
-        <Todos />
-      </TodoListContext.Provider>
+      <Control 
+        {
+          ...bindActionCreators({
+            addTodo: createAdd
+          }, dispatch)
+        }
+      />
+      <Todos todos={todos} 
+      {
+        ...bindActionCreators({
+          removeTodo: createRemove,
+          toggleTodo: createToggle
+        }, dispatch)
+      } />
     </div>
   );
 }
