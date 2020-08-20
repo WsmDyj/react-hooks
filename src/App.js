@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createSet, createAdd, createRemove, createToggle } from './actions'
 import './App.css';
+import reducer from './reducers'
 
 // action和dispatch合并
 function bindActionCreators(actionCreators, dispatch) {
@@ -84,61 +85,7 @@ function TodoItem(props) {
 
 function TodoList() {
   const [todos, setTodos] = useState([]);
-  const [incrementCount, setIncrementCount] = useState(0);
-
-  // const addTodo = useCallback((todo) => {
-  //   setTodos(todos => [...todos, todo])
-  // }, [])
-
-  // const removeTodo = useCallback((id) => {
-  //   setTodos((todos) =>
-  //     todos.filter((todo) => {
-  //       return todo.id !== id;
-  //     })
-  //   );
-  // }, [])
-  // const toggleTodo = useCallback((id) => {
-  //   setTodos((todos) =>
-  //     todos.map((todo) => {
-  //       return todo.id === id ? { ...todo, complete: !todo.complete } : todo
-  //     })
-  //   );
-  // }, [])
-
-  function reducer(state, action) {
-    const { type, payload } = action
-    const { todos, incrementCount } = state
-    switch (type) {
-      case 'set':
-        return {
-          ...state, 
-          todos: payload, 
-          incrementCount: incrementCount + 1
-        }
-      case 'add':
-        return {
-          ...state, 
-          todos: todos => [...todos, payload], 
-          incrementCount: incrementCount + 1
-        }
-      case 'remove':
-        return {
-          ...state, 
-          todos: todos.filter((todo) => {
-            return todo.id !== payload
-          })
-        }
-      case 'toggle':
-        return {
-          ...state, 
-          todos: todos.map((todo) => {
-            return todo.id === payload ? { ...todo, complete: !todo.complete } : todo
-          })
-        }
-      default:
-    }
-    return state
-  }
+  const [incrementCount, setIncrementCount] = useState(0)
 
   const dispatch = useCallback((action) => {
     const state = {
