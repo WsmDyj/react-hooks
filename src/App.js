@@ -1,7 +1,9 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createSet, createAdd, createRemove, createToggle } from './actions'
 import './App.css';
 
+// action和dispatch合并
 function bindActionCreators(actionCreators, dispatch) {
   const ret = {}
   for (let key in actionCreators) {
@@ -57,7 +59,7 @@ function Todos(props) {
         );
       })}
     </ul>
-  );
+  )
 }
 
 function TodoItem(props) {
@@ -77,11 +79,12 @@ function TodoItem(props) {
       <label className={complete ? "complete" : ""}>{text}</label>
       <button onClick={onRemove}>&#xd7;</button>
     </li>
-  );
+  )
 }
 
 function TodoList() {
   const [todos, setTodos] = useState([]);
+  const [incrementCount, setIncrementCount] = useState(0);
 
   // const addTodo = useCallback((todo) => {
   //   setTodos(todos => [...todos, todo])
@@ -102,42 +105,63 @@ function TodoList() {
   //   );
   // }, [])
 
-  const dispatch = useCallback((action) => {
+  function reducer(state, action) {
     const { type, payload } = action
+    const { todos, incrementCount } = state
     switch (type) {
       case 'set':
-        setTodos(payload)
-        break
+        return {
+          ...state, 
+          todos: payload, 
+          incrementCount: incrementCount + 1
+        }
       case 'add':
-        setTodos(todos => [...todos, payload])
-        break
+        return {
+          ...state, 
+          todos: todos => [...todos, payload], 
+          incrementCount: incrementCount + 1
+        }
       case 'remove':
-        setTodos((todos) =>
-          todos.filter((todo) => {
+        return {
+          ...state, 
+          todos: todos.filter((todo) => {
             return todo.id !== payload
           })
-        );
-        break
+        }
       case 'toggle':
-        setTodos((todos) =>
-          todos.map((todo) => {
+        return {
+          ...state, 
+          todos: todos.map((todo) => {
             return todo.id === payload ? { ...todo, complete: !todo.complete } : todo
           })
-        )
-        break
+        }
       default:
     }
-  }, [])
+    return state
+  }
 
+  const dispatch = useCallback((action) => {
+    const state = {
+      todos,
+      incrementCount
+    }
+    const setters = {
+      todos: setTodos,
+      incrementCount: setIncrementCount
+    }
+    const newState = reducer(state, action)
+    for (let key in newState) {
+      setters[key](newState[key])
+    }
+  }, [todos, incrementCount])
+
+  
   // 项目启动一次
   useEffect(() => {
-    if (localStorage.getItem("_$-todos_")) {
-      const todos = JSON.parse(localStorage.getItem("_$-todos_"));
-      // setTodos(todos);
-      // dispatch({type: 'set', payload: todos})
-      dispatch(createSet(todos))
-    }
-  }, [dispatch]);
+    const todos = JSON.parse(localStorage.getItem("_$-todos_"));
+    dispatch(createSet(todos))
+  },[]);
+  
 
   useEffect(() => {
     localStorage.setItem("_$-todos_", JSON.stringify(todos));
@@ -146,6 +170,7 @@ function TodoList() {
 
   return (
     <div className="todo-list">
+      {incrementCount}
       <Control 
         {
           ...bindActionCreators({
