@@ -23,11 +23,7 @@ function Control(props) {
   const inputRef = useRef()
   const onSubmit = () => {
     const newText = inputRef.current.value.trim();
-    addTodo(({
-      id: Date.now(),
-      text: newText,
-      complete: false
-    }));
+    addTodo(newText);
     inputRef.current.value = "";
   }
   return (
@@ -83,24 +79,34 @@ function TodoItem(props) {
   )
 }
 
+let store = {
+  todos: [],
+  incrementCount: 0
+}
+
 function TodoList() {
   const [todos, setTodos] = useState([]);
   const [incrementCount, setIncrementCount] = useState(0)
 
-  const dispatch = useCallback((action) => {
-    const state = {
-      todos,
-      incrementCount
-    }
+  useEffect(() => {
+    Object.assign(store, {todos, incrementCount})
+  }, [todos, incrementCount])
+
+  const dispatch = (action) => {
+   
     const setters = {
       todos: setTodos,
       incrementCount: setIncrementCount
     }
-    const newState = reducer(state, action)
+    if ('function' === typeof action) {
+      action(dispatch, () => store)
+      return
+    }
+    const newState = reducer(store, action)
     for (let key in newState) {
       setters[key](newState[key])
     }
-  }, [todos, incrementCount])
+  }
 
   
   // 项目启动一次

@@ -4,10 +4,23 @@ export function createSet(payload) {
     payload
   }
 }
-export function createAdd(payload) {
-  return {
-    type: 'add',
-    payload
+export function createAdd(text) {
+  return (dispatch, getState) => {
+    setTimeout(() => {
+      const { todos } = getState()
+      if (!todos.find(todo => todo.text === text)) {
+        dispatch({
+          type: 'add',
+          payload: {
+            id: Date.now(),
+            text: text,
+            complete: false
+          }
+        })
+      } else {
+        alert('todo重复添加')
+      }
+    }, (1000))
   }
 }
 export function createRemove(payload) {
